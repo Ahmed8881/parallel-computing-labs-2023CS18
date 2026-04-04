@@ -1,8 +1,8 @@
 # Parallel and Distributed Computing Lab Portfolio
 
 ## Student Information
-- Name: [Your Name]
-- Roll Number: [Your Roll Number]
+- Name: M Ahmed Butt
+- Roll Number: 2023-CS-18
 - Course: Parallel and Distributed Computing
 - Instructor: Waqas Ali
 
