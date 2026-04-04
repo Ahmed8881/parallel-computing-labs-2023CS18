@@ -51,6 +51,8 @@ Count = 1000042
 Time = 2.45 seconds
 ```
 
+
+
 ### Parallel C (count_pthread with 2 threads)
 ```
 Count = 1000042

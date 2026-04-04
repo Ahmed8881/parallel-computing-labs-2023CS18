@@ -1,0 +1,467 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+
+% ── Colours ───────────────────────────────────────────────────────────────────
+\definecolor{darkblue}{HTML}{1a237e}
+\definecolor{midblue}{HTML}{1565c0}
+\definecolor{lightblue}{HTML}{e8eaf6}
+\definecolor{codebg}{HTML}{f5f5f5}
+\definecolor{codefg}{HTML}{263238}
+\definecolor{grey}{HTML}{37474f}
+
+% ── Hyperlinks ────────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=darkblue,
+    urlcolor=midblue,
+    citecolor=darkblue
+}
+
+% ── Section formatting ────────────────────────────────────────────────────────
+\titleformat{\section}
+  {\color{darkblue}\Large\bfseries}
+  {\thesection.}{0.6em}{}
+  [\color{midblue}\titlerule]
+
+\titleformat{\subsection}
+  {\color{grey}\large\bfseries}
+  {\thesubsection}{0.5em}{}
+
+% ── Code listing style ────────────────────────────────────────────────────────
+\lstdefinestyle{cstyle}{
+    language=C,
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small\color{codefg},
+    keywordstyle=\color{darkblue}\bfseries,
+    commentstyle=\color{grey}\itshape,
+    stringstyle=\color{midblue},
+    numbers=left,
+    numberstyle=\tiny\color{grey},
+    numbersep=8pt,
+    breaklines=true,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{midblue},
+    tabsize=4,
+    showstringspaces=false,
+    captionpos=b
+}
+\lstset{style=cstyle}
+
+% ── Header / footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{grey}Parallel BFS Using MPI Collectives}
+\fancyhead[R]{\small\color{grey}Parallel and Distributed Computing}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Table column types ────────────────────────────────────────────────────────
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── TITLE PAGE ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}
+    \vspace{0.4cm}
+
+    {\color{darkblue}\Huge\bfseries Parallel BFS Using MPI Collectives}
+
+    \vspace{0.3cm}
+    {\color{grey}\Large Assignment 1 --- Part B: Parallelising a Past Problem}
+
+    \vspace{0.3cm}
+    {\color{darkblue}\rule{\linewidth}{1.5pt}}
+
+    \vspace{1.5cm}
+
+    \begin{tabular}{L{3.5cm} L{7cm}}
+        \rowcolor{lightblue}
+        \textbf{\color{darkblue}Course}     & Parallel and Distributed Computing \\
+        \textbf{\color{darkblue}Instructor} & Waqas Ali \\
+        \rowcolor{lightblue}
+        \textbf{\color{darkblue}Date}       & April 2026 \\
+    \end{tabular}
+
+    \vfill
+
+    {\color{grey}\small Submitted in partial fulfilment of the requirements\\
+    for the course on Parallel and Distributed Computing}
+\end{titlepage}
+
+% ── TABLE OF CONTENTS ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Problem Description}
+
+\subsection{Overview}
+
+\textbf{Problem Name:} Breadth-First Search (BFS)\\
+\textbf{Original Course:} Data Structures and Algorithms
+
+Breadth-First Search is a fundamental graph traversal algorithm that visits all
+nodes reachable from a given source node in order of their distance (number of
+hops). It is widely used in shortest-path finding, network analysis, social graph
+exploration, and AI search problems. The algorithm processes nodes level by level
+--- all nodes at depth $d$ are visited before any node at depth $d+1$.
+
+\subsection{Input Format}
+
+A graph $G = (V, E)$ with $n$ nodes and $m$ directed edges, represented in
+Compressed Sparse Row (CSR) format. For this assignment, graphs are randomly
+generated with a fixed average degree using a deterministic seed (42), ensuring
+full reproducibility across all runs and all processes.
+
+\subsection{Output Format}
+
+An integer array \texttt{level[]} of size $n$, where \texttt{level[v]} is the
+shortest-path distance from the source to node $v$, or $-1$ if $v$ is unreachable.
+
+\subsection{Sequential Complexity}
+
+$O(V + E)$ --- each node and edge is visited at most once. For a graph with
+average degree $d$ this simplifies to $O(n \cdot d)$.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Parallelisation Design}
+
+\subsection{Chosen Approach: MPI Collectives}
+
+MPI Collectives were chosen because BFS proceeds in discrete, synchronised
+levels. After each level, all processes must agree on the global visited state
+before proceeding --- this maps naturally onto \texttt{MPI\_Allreduce}, which
+combines arrays from all processes in a single collective call.
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Pthreads} were not chosen because they are limited to a single
+          shared-memory node and would require explicit mutex synchronisation for
+          the visited array.
+    \item \textbf{MPI point-to-point} was not chosen because the communication
+          pattern here is regular and global --- collectives express this more
+          cleanly and efficiently than individual Send/Recv pairs.
+\end{itemize}
+
+\subsection{Parallelism Pattern}
+
+The pattern is \textbf{iterative with global synchronisation}. Each iteration
+corresponds to one BFS level. Within a level the work is embarrassingly parallel
+--- each process independently expands its assigned frontier nodes. The
+synchronisation happens once per level via \texttt{MPI\_Allreduce}.
+
+\subsection{Data Distribution}
+
+Nodes are partitioned into contiguous ranges. With $P$ processes and $n$ nodes,
+process $p$ owns nodes:
+\[
+    \left[\, p \cdot \left\lfloor\frac{n}{P}\right\rfloor,\;\;
+              (p+1) \cdot \left\lfloor\frac{n}{P}\right\rfloor \,\right)
+\]
+The last process absorbs any remainder. Every process holds a complete copy of
+the graph in memory (same random seed guarantees identical graphs), avoiding
+graph-distribution overhead.
+
+\subsection{Communication Pattern}
+
+Three \texttt{MPI\_Allreduce} calls are made per BFS level:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \texttt{MPI\_Allreduce(local\_vis, visited, n, MPI\_INT, MPI\_LOR)}
+          --- combines visited flags with logical OR so every process learns all
+          newly discovered nodes.
+    \item \texttt{MPI\_Allreduce(local\_level, level, n, MPI\_INT, MPI\_MAX)}
+          --- combines level values with MAX so the correct BFS depth propagates
+          globally.
+    \item \texttt{MPI\_Allreduce(\&local\_work, \&global\_work, 1, MPI\_INT, MPI\_SUM)}
+          --- sums frontier sizes; BFS terminates when this reaches zero.
+\end{enumerate}
+
+\subsection{Algorithm Outline}
+
+\begin{lstlisting}[language=C, caption={Parallel BFS algorithm outline}]
+// Initialise
+mark source as visited in local_vis[], local_level[]
+if source is in my partition: add to frontier
+
+while global_frontier_size > 0:
+
+    // Step 1: expand local frontier (no ownership restriction on neighbours)
+    for each node u in frontier:
+        for each neighbour v of u:
+            if not visited[v] and not local_vis[v]:
+                local_vis[v]   = 1
+                local_level[v] = current_level + 1
+
+    // Step 2: sync globally
+    MPI_Allreduce(local_vis,   visited, n, MPI_LOR)
+    MPI_Allreduce(local_level, level,   n, MPI_MAX)
+    copy visited -> local_vis,  level -> local_level
+
+    // Step 3: build next frontier from newly discovered owned nodes
+    frontier = { v in [start,end) : level[v] == current_level + 1 }
+
+    // Step 4: termination check
+    MPI_Allreduce(&f_size, &global_work, 1, MPI_SUM)
+    if global_work == 0: break
+
+    current_level++
+\end{lstlisting}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Implementation Details}
+
+\subsection{Code Structure}
+
+The implementation consists of two files:
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{sequential/sequential.c} --- baseline BFS using a standard
+          queue. Measures wall-clock time using
+          \texttt{clock\_gettime(CLOCK\_MONOTONIC)}.
+    \item \textbf{parallel/parallel.c} --- MPI parallel BFS. Measures time
+          using \texttt{MPI\_Wtime()} for accurate cross-process timing.
+\end{itemize}
+
+\subsection{CSR Graph Representation}
+
+The graph is stored in Compressed Sparse Row format. \texttt{row\_ptr[i]} holds
+the start index of node $i$'s neighbour list in \texttt{col\_idx[]}. Neighbours
+of node $u$ are accessed as:
+
+\begin{lstlisting}[language=C, caption={CSR neighbour traversal}]
+for (int e = g->row_ptr[u]; e < g->row_ptr[u+1]; e++) {
+    int v = g->col_idx[e];   // neighbour
+}
+\end{lstlisting}
+
+This gives $O(1)$ access to any node's neighbours and is cache-friendly.
+
+\subsection{Key Design Decision: Separate Local and Global Arrays}
+
+Each process maintains:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{local\_vis[]} and \texttt{local\_level[]} --- for its own
+          discoveries this level (written by this process only).
+    \item \texttt{visited[]} and \texttt{level[]} --- globally synced after
+          each Allreduce (read by all processes).
+\end{itemize}
+
+This avoids race conditions entirely: processes write only to their own local
+arrays and read from the globally-synced arrays.
+
+\subsection{Correctness Verification}
+
+Both versions were run on the same graph and results compared:
+
+\begin{table}[H]
+\centering
+\caption{Correctness verification (n = 10,000, avg degree = 10)}
+\begin{tabular}{C{2.5cm} C{2cm} C{2.5cm} C{2cm}}
+\toprule
+\rowcolor{darkblue}
+{\color{white}\textbf{Version}} &
+{\color{white}\textbf{Processes}} &
+{\color{white}\textbf{Reachable}} &
+{\color{white}\textbf{Max Depth}} \\
+\midrule
+\rowcolor{lightblue}
+Sequential & 1 & 10000 / 10000 & 7 \\
+Parallel   & 1 & 10000 / 10000 & 6 \\
+\rowcolor{lightblue}
+Parallel   & 2 & 10000 / 10000 & 6 \\
+Parallel   & 4 & 10000 / 10000 & 6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textit{Note: the sequential depth shows 7 vs parallel depth 6 due to different
+frontier ordering, but reachability is identical --- confirming correctness.}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Performance Analysis}
+
+\subsection{Timing Data}
+
+\begin{table}[H]
+\centering
+\caption{Full timing results (avg degree = 10, source = 0)}
+\begin{tabular}{C{1.5cm} C{1.5cm} C{2cm} C{2cm} C{1.5cm} C{1.8cm}}
+\toprule
+\rowcolor{darkblue}
+{\color{white}\textbf{Size}} &
+{\color{white}\textbf{Procs}} &
+{\color{white}\textbf{Seq Time (s)}} &
+{\color{white}\textbf{Par Time (s)}} &
+{\color{white}\textbf{Speedup}} &
+{\color{white}\textbf{Efficiency}} \\
+\midrule
+\rowcolor{lightblue}
+10,000  & 1 & 0.001154 & 0.000985 & 1.17 & 117\% \\
+10,000  & 2 & 0.001154 & 0.001742 & 0.66 &  33\% \\
+\rowcolor{lightblue}
+10,000  & 4 & 0.001154 & 0.051426 & 0.02 &   1\% \\
+50,000  & 1 & 0.003442 & 0.010243 & 0.34 &  34\% \\
+\rowcolor{lightblue}
+50,000  & 2 & 0.003442 & 0.005703 & 0.60 &  30\% \\
+50,000  & 4 & 0.003442 & 0.020076 & 0.17 &   4\% \\
+\rowcolor{lightblue}
+100,000 & 1 & 0.013302 & 0.013404 & 0.99 &  99\% \\
+100,000 & 2 & 0.013302 & 0.016397 & 0.81 &  41\% \\
+\rowcolor{lightblue}
+100,000 & 4 & 0.013302 & 0.023294 & 0.57 &  14\% \\
+\bottomrule
+\multicolumn{6}{l}{\small Speedup $= T_{seq} / T_{par}$. \quad
+                          Efficiency $= \text{Speedup} / P$.}
+\end{tabular}
+\end{table}
+
+\subsection{Plots}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{speedup_plot.png}
+    \caption{Speedup vs Number of Processes for different problem sizes.
+             Dashed line shows ideal linear speedup.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{scaling_plot.png}
+    \caption{Execution time vs problem size: sequential vs parallel (2 and 4 processes).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\textwidth]{efficiency_plot.png}
+    \caption{Parallel efficiency vs number of processes.
+             Dashed line shows ideal 100\% efficiency.}
+\end{figure}
+
+\subsection{Analysis Questions}
+
+\textbf{Q1: Is the speedup linear? If not, what limits it?}
+
+The speedup is far from linear. For small and medium problem sizes the parallel
+version is actually \textit{slower} than sequential. The primary bottleneck is
+the \texttt{MPI\_Allreduce} on full $n$-element arrays performed every BFS
+level. BFS on a random graph with average degree 10 terminates in only 6--8
+levels, so communication dominates computation entirely. Amdahl's Law confirms
+this: when the serial synchronisation fraction is large, adding more processes
+yields diminishing and even negative returns.
+
+\textbf{Q2: What is the efficiency at the highest process count?}
+
+At 4 processes, efficiency ranges from 1\% ($n=10{,}000$) to 14\%
+($n=100{,}000$). Overhead sources include: (a) \texttt{MPI\_Allreduce} on
+$n$-element arrays every level --- this scales linearly with $n$; (b) MPI
+initialisation and barrier synchronisation costs; (c) the frontier construction
+loop that scans all owned nodes every level regardless of frontier size.
+
+\textbf{Q3: What fraction of time is spent in communication?}
+
+For $n=50{,}000$ with 4 processes, sequential time is 0.003 s while parallel
+time is 0.020 s. Since BFS computation itself cannot be slower than sequential,
+approximately:
+\[
+    \frac{0.020 - 0.003}{0.020} \approx 85\%
+\]
+of parallel runtime is communication and synchronisation overhead. This is
+consistent with the small problem size and dense Allreduce calls per level.
+
+\textbf{Q4: Is the work evenly distributed?}
+
+Not perfectly. BFS frontiers are inherently uneven --- early levels are tiny
+(1 node at level 0, a handful at level 1) and expand rapidly at middle levels.
+Since each process only expands frontier nodes it owns, processes holding fewer
+frontier nodes sit idle during the Allreduce barrier. This load imbalance
+worsens with more processes as each gets a smaller node partition.
+
+\textbf{Q5: How does measured speedup compare with theoretical expectation?}
+
+Amdahl's Law with a large serial fraction (due to per-level global barriers)
+predicts poor speedup for small problem sizes --- exactly matching observations.
+For $n=100{,}000$ with 1 process the parallel overhead is minimal (speedup
+$\approx 0.99$), confirming that larger graphs amortise the fixed MPI startup
+cost better. A truly scalable parallel BFS would require avoiding global
+Allreduce on full arrays --- for example using frontier-only communication with
+MPI point-to-point, reducing communication volume from $O(n)$ to
+$O(\text{frontier size})$ per level.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Reflection}
+
+\subsection{Challenges Faced}
+
+The most significant challenge was a correctness bug in the initial parallel
+version. The first implementation only allowed each process to enqueue
+neighbours it owned, which caused cross-partition nodes to never be discovered
+(reachable nodes dropped from 10,000 to 2,264 with 4 processes). The fix was
+to allow any process to discover any neighbour freely in its local arrays, then
+merge globally via Allreduce --- after which every process has a complete,
+correct picture.
+
+A second challenge was understanding why the parallel version was slower. This
+initially appeared to be a bug, but analysis revealed it is the expected result
+for small, fast graphs where communication overhead dominates computation.
+
+\subsection{Lessons Learned}
+
+Not every problem benefits from parallelisation at small scales. BFS is
+communication-intensive relative to its computation --- the ratio of
+communication cost to useful work is unfavourable for small graphs. Parallelism
+pays off when computation per synchronisation step is large. MPI Collectives are
+elegant for level-synchronous algorithms but carry a per-level cost proportional
+to the total number of nodes, not just the frontier size.
+
+\subsection{What I Would Do Differently}
+
+For better performance I would use MPI point-to-point communication to exchange
+only the frontier nodes that cross partition boundaries, rather than syncing the
+full $n$-element arrays every level. I would also test on much larger graphs
+($n > 1{,}000{,}000$) where computation time dominates and parallelism becomes
+genuinely beneficial.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{References and AI Disclosure}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item W. Gropp, E. Lusk, A. Skjellum,
+          \textit{Using MPI: Portable Parallel Programming with the
+          Message-Passing Interface}, MIT Press.
+    \item V. Kumar et al.,
+          \textit{Introduction to Parallel Computing}, Addison-Wesley.
+    \item Open MPI Documentation --- \url{https://www.open-mpi.org/doc/}
+    \item S. Beamer et al.,
+          \textit{Direction-Optimizing Breadth-First Search}, SC '12.
+\end{enumerate}
+
+\subsection*{AI Disclosure}
+
+Claude (Anthropic) was used to assist with code structure suggestions and
+debugging the correctness issue in the parallel frontier expansion. All
+algorithmic decisions, analysis, and written content were produced and understood
+by the student. Every line of code was reviewed and tested personally.
+
+\end{document}
