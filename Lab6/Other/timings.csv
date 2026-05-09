@@ -20,3 +20,4 @@ OpenMP_Critical,1,2.44,1.00
 OpenMP_Critical,2,1.30,1.88
 OpenMP_Critical,4,0.70,3.49
 OpenMP_Critical,8,0.45,5.42
+OpenMP_ParallelInit,1,1.003159,1.00

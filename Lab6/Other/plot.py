@@ -14,7 +14,10 @@ df = pd.read_csv(CSV)
 df['threads'] = df['threads'].astype(int)
 threads_sorted = sorted(df['threads'].unique())
 
-approaches = ['Pthreads', 'MPI_P2P', 'MPI_Collectives', 'OpenMP_Reduction', 'OpenMP_Critical']
+base_approaches = ['Pthreads', 'MPI_P2P', 'MPI_Collectives', 'OpenMP_Reduction', 'OpenMP_Critical']
+# include any additional approaches found in the CSV (e.g. OpenMP_ParallelInit)
+all_approaches = list(dict.fromkeys(list(base_approaches) + list(df['approach'].unique())))
+approaches = [a for a in all_approaches if a in df['approach'].unique()]
 
 # Figure 1: speedup comparison
 plt.figure(figsize=(8,5))
@@ -56,11 +59,18 @@ plt.close()
 
 # Figure 3: OpenMP internal comparison (Reduction vs Critical)
 plt.figure(figsize=(8,5))
-for ap in ['OpenMP_Reduction', 'OpenMP_Critical']:
+openmp_internal = ['OpenMP_Reduction', 'OpenMP_Critical']
+for ap in openmp_internal:
     sub = df[df['approach'] == ap].sort_values('threads')
     if sub.empty:
         continue
     plt.plot(sub['threads'], sub['speedup'], marker='o', label=ap)
+
+# if a parallel-init timing is present, include it in the internal comparison
+if 'OpenMP_ParallelInit' in df['approach'].unique():
+    sub = df[df['approach'] == 'OpenMP_ParallelInit'].sort_values('threads')
+    if not sub.empty:
+        plt.plot(sub['threads'], sub['speedup'], marker='s', label='OpenMP_ParallelInit')
 
 plt.plot(threads_sorted, threads_sorted, '--k', label='Ideal')
 plt.xlabel('Number of Threads')
