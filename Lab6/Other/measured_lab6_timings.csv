@@ -1,0 +1,13 @@
+approach,threads,time_seconds
+OpenMP_Reduction,1,0.111337
+OpenMP_Reduction,2,0.070192
+OpenMP_Reduction,4,0.038540
+OpenMP_Reduction,8,0.064332
+OpenMP_Critical,1,0.105268
+OpenMP_Critical,2,0.087484
+OpenMP_Critical,4,0.038522
+OpenMP_Critical,8,0.050545
+OpenMP_ParallelInit,1,(seconds):
+OpenMP_ParallelInit,2,(seconds):
+OpenMP_ParallelInit,4,(seconds):
+OpenMP_ParallelInit,8,(seconds):

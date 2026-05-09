@@ -1,0 +1,4 @@
+=== OpenMP Reduction threads=2 ===
+Count: 1001619
+Time (seconds): 0.070192
+Threads used: 2

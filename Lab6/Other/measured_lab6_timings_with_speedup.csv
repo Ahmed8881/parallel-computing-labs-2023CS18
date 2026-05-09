@@ -1,0 +1,9 @@
+approach,threads,time_seconds,speedup
+OpenMP_Reduction,1,0.111337,1.00
+OpenMP_Reduction,2,0.070192,1.59
+OpenMP_Reduction,4,0.038540,2.89
+OpenMP_Reduction,8,0.064332,1.73
+OpenMP_Critical,1,0.105268,1.00
+OpenMP_Critical,2,0.087484,1.20
+OpenMP_Critical,4,0.038522,2.73
+OpenMP_Critical,8,0.050545,2.08

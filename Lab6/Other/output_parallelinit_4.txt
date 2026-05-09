@@ -1,0 +1,6 @@
+=== OpenMP ParallelInit threads=4 ===
+Count: 999987
+Init time (seconds): 0.285434
+Count time (seconds): 0.043658
+Total time (seconds): 0.329093
+Threads used: 4

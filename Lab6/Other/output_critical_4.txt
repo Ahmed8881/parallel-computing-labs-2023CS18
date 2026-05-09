@@ -1,0 +1,4 @@
+=== OpenMP Critical threads=4 ===
+Count: 1000094
+Time (seconds): 0.038522
+Threads used: 4
