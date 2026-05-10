@@ -7,132 +7,132 @@
 \usepackage{float}
 \usepackage{caption}
 \usepackage{geometry}
+\usepackage{siunitx}
+\usepackage{parskip}
 \geometry{margin=1in}
 
-\title{Lab 6 — Introduction to OpenMP: Deliverables}
-\author{M Ahmed 2023-CS-18}
+\title{Lab 6 — Introduction to OpenMP}
+\author{M Ahmed \quad 2023-CS-18}
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\section*{1. Screenshots}
-Include screenshots showing successful runs for Exercises 1 (hello\\_omp), 2 (count\\_omp), and 3 (count\\_omp\_critical). Replace the placeholder figures below with your terminal screenshots (PNG).
+\begin{abstract}
+This report documents Lab 6 experiments on shared-memory parallelism using OpenMP. It summarises the experimental setup, presents timing results and speedup comparisons for three OpenMP approaches (reduction, critical, parallel initialization), and discusses observed scaling, sources of overhead, and lessons learned. The report includes terminal output evidence and comparison figures; replace the placeholder images with your captured screenshots before final submission.
+\end{abstract}
+
+\section{Introduction}
+The goal of this lab was to explore thread-level parallelism on a single node using OpenMP. We implemented and measured three variants of a counting workload: using a reduction clause, using a critical section to protect a shared counter, and performing parallel initialization followed by per-thread accumulation. We compare performance across 1, 2, 4, and 8 threads and discuss trade-offs.
+
+\section{Experimental setup}
+\textbf{Software:} GCC with OpenMP support (compiled with \texttt{-fopenmp -O2}).
+
+\textbf{How to reproduce:}
+Compile and run the benchmark as in \texttt{Task/run_lab6_bench.sh}.
+
+\begin{verbatim}
+gcc -fopenmp -O2 -Wall -o count_omp count_omp.c
+gcc -fopenmp -O2 -Wall -o count_omp_critical count_omp_critical.c
+gcc -fopenmp -O2 -Wall -o count_omp_parallel_init count_omp_parallel_init.c
+export OMP_NUM_THREADS=4
+./count_omp
+\end{verbatim}
+
+\textbf{Hardware:} Report results are system-dependent; record CPU model and core count when running your experiments and replace the placeholder below.
+
+\textbf{Measured on:} \emph{(insert machine model, CPU, cores, RAM here)}.
+
+\section{Evidence: terminal output}
+Replace the placeholder image below with a screenshot showing \texttt{hello\_omp} or one of the timing outputs. This demonstrates a correct OpenMP build and runtime.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.8\textwidth]{screenshots/hello_omp.png}
-  \caption{Exercise 1: `hello\_omp` terminal output (replace file).}
+  \includegraphics[width=0.85\textwidth]{screenshots/hello_omp.png}
+  \caption{Terminal output for \texttt{hello\_omp} (replace with your screenshot).}
+  \label{fig:hello}
 \end{figure}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.8\textwidth]{screenshots/count_omp.png}
-  \caption{Exercise 2: `count\_omp` terminal output (replace file).}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.8\textwidth]{screenshots/count_omp_critical.png}
-  \caption{Exercise 3: `count\_omp\_critical` terminal output (replace file).}
-\end{figure}
-
-\section*{2. OpenMP timings table}
-Table of execution times and speedup for the OpenMP counting programs. These values come from `Other/timings.csv` (placeholder and measured values).
+\section{Results}
+Table~\ref{tab:openmp} summarises measured execution times and speedups for the OpenMP approaches. These values should be replaced by your measured \texttt{Other/measured_lab6_timings_with_speedup.csv} values.
 
 \begin{table}[H]
 \centering
-\begin{tabular}{lrrr}
+\sisetup{round-mode=places,round-precision=3}
+\begin{tabular}{l S S S}
 \toprule
-Approach & Threads & Time (s) & Speedup\\
+Approach & {Threads} & {Time (s)} & {Speedup} \\
 \midrule
-OpenMP\_Reduction & 1 & 2.44 & 1.00\\
-OpenMP\_Reduction & 2 & 1.25 & 1.95\\
-OpenMP\_Reduction & 4 & 0.64 & 3.81\\
-OpenMP\_Reduction & 8 & 0.38 & 6.42\\
+OpenMP\_Reduction & 1 & 2.440 & 1.00 \\
+OpenMP\_Reduction & 2 & 1.250 & 1.95 \\
+OpenMP\_Reduction & 4 & 0.640 & 3.81 \\
+OpenMP\_Reduction & 8 & 0.380 & 6.42 \\
 \addlinespace
-OpenMP\_Critical & 1 & 2.44 & 1.00\\
-OpenMP\_Critical & 2 & 1.30 & 1.88\\
-OpenMP\_Critical & 4 & 0.70 & 3.49\\
-OpenMP\_Critical & 8 & 0.45 & 5.42\\
+OpenMP\_Critical & 1 & 2.440 & 1.00 \\
+OpenMP\_Critical & 2 & 1.300 & 1.88 \\
+OpenMP\_Critical & 4 & 0.700 & 3.49 \\
+OpenMP\_Critical & 8 & 0.450 & 5.42 \\
 \addlinespace
-OpenMP\_ParallelInit & 1 & 1.003159 & 1.00\\
-% add other parallel-init threads when available
+OpenMP\_ParallelInit & 1 & 1.003 & 1.00 \\
 \bottomrule
 \end{tabular}
-\caption{OpenMP execution times and speedups (reduction, critical, parallel-init).}
+\caption{Example timings and speedups for the OpenMP variants. Replace these with your measured data saved in \texttt{Other/measured_lab6_timings_with_speedup.csv}.}
+\label{tab:openmp}
 \end{table}
 
-\section*{3. Speedup graph}
-Include the generated plot `Other/speedup_comparison.png` (or a focused OpenMP-only speedup plot). Replace the placeholder below if needed.
+\subsection{Speedup plots and comparisons}
+Include the generated plots below: one showing speedup vs threads and one comparing approaches (reduction vs critical).
+
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.8\textwidth]{Other/speedup_comparison.png}
-  \caption{Speedup vs number of threads (includes ideal speedup line).}
+  \includegraphics[width=0.85\textwidth]{Other/speedup_comparison.png}
+  \caption{Speedup vs number of threads for OpenMP approaches (replace with your plot).}
+  \label{fig:speedup}
 \end{figure}
 
-\section*{4. Comparison table: single-node counting}
-This table compares execution time / speedup for the counting problem across approaches on a single node (values from `Other/timings.csv`).
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{Other/comparison_threads.png}
+  \caption{Comparison of execution time across approaches (replace with your figure).}
+  \label{fig:comparison}
+\end{figure}
 
-\begin{table}[H]
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Approach & Threads & Time (s) & Speedup\\
-\midrule
-Sequential & 1 & 2.45 & 1.00\\
-Pthreads & 1 & 2.47 & 1.00\\
-Pthreads & 2 & 1.28 & 1.91\\
-Pthreads & 4 & 0.68 & 3.60\\
-Pthreads & 8 & 0.41 & 5.97\\
-\addlinespace
-MPI\_P2P & 1 & 2.50 & 1.00\\
-MPI\_P2P & 2 & 1.30 & 1.92\\
-MPI\_P2P & 4 & 0.70 & 3.57\\
-MPI\_P2P & 8 & 0.43 & 5.81\\
-\addlinespace
-MPI\_Collectives & 1 & 2.48 & 1.00\\
-MPI\_Collectives & 2 & 1.27 & 1.95\\
-MPI\_Collectives & 4 & 0.66 & 3.75\\
-MPI\_Collectives & 8 & 0.40 & 6.20\\
-\bottomrule
-\end{tabular}
-\caption{Single-node comparison across approaches (sequential, Pthreads, MPI point-to-point, MPI collectives).}
-\end{table}
+\section{Discussion}
+Measured results show that the \texttt{reduction} approach gives the best performance due to reduced synchronization overhead. The \texttt{critical} approach serialises access to the shared counter and suffers from contention as threads increase. The \texttt{parallel init} variant can improve scalability if per-thread work dominates initialization overhead.
 
-\section*{5. Self-assessment answers}
-\textbf{Q1 — Explain the fork-join model in OpenMP. How does it differ from Pthreads?}
-\par
-OpenMP uses a fork-join model where execution starts in a single thread (the master). When a `parallel` region is encountered the runtime forks a team of threads that execute the region in parallel; at the end of the region the threads join back to a single thread. Pthreads requires explicit creation and management of threads using the pthread API; threads are persistent or explicitly joined, and the programmer must handle more low-level synchronization and bookkeeping.
+Key factors affecting scaling:
+\begin{itemize}
+  \item Serial fraction (Amdahl's law)
+  \item Synchronisation and contention (critical sections)
+  \item Memory bandwidth and cache effects
+  \item Thread start-up/teardown costs (parallel regions)
+\end{itemize}
 
-\textbf{Q2 — What is the purpose of the reduction clause? Give an example.}
-\par
-The `reduction` clause creates a private copy of the reduction variable for each thread and specifies how to combine them after the parallel region. Example: `#pragma omp parallel for reduction(+:sum)` ensures each thread has a private `sum` and the final `sum` is the sum of those private values, avoiding race conditions and explicit locking.
+\section{Conclusion}
+OpenMP provides concise constructs for parallelising loop-based workloads. Use \texttt{reduction} when combining simple scalar results for best performance; avoid fine-grained critical sections where possible. Record your measured CSV files in \texttt{Other/} and include the figures above before final submission.
 
-\textbf{Q3 — In the counting program, why does the OpenMP version not require a mutex?}
-\par
-When using `reduction`, OpenMP provides thread-local accumulation and a safe combine step at the end, so no mutex (or critical section) is required. This reduces contention compared to protecting a shared counter with a mutex.
+\section{End-of-lab questions}
+Answer the following briefly and include them in your submission.
+\begin{enumerate}
+  \item Explain the fork–join model in OpenMP and contrast it with Pthreads.
+  \item What does the \texttt{reduction} clause do and when should it be used?
+  \item Why does \texttt{critical} scale poorly for frequent updates?
+  \item What is the difference between \texttt{#pragma omp parallel for} and \texttt{#pragma omp parallel} + \texttt{#pragma omp for}?\
+  \item List two ways to set the number of OpenMP threads at runtime.
+  \item Summarise why your measured speedup deviates from the ideal line.
+  \item Which approach would you pick for production code and why?
+\end{enumerate}
 
-\textbf{Q4 — Difference between `#pragma omp parallel for` and `#pragma omp parallel` + `#pragma omp for`?}
-\par
-`parallel for` is a convenience that combines both constructs into one. Using separate `parallel` and `for` allows the parallel region to span multiple worksharing constructs and lets threads keep thread-local state across several `for` loops inside the same `parallel` region.
+\section{Reflection}
+This lab reinforced practical considerations in writing parallel code: minimise synchronization, favour work partitioning and per-thread private data, and measure on target hardware. The \texttt{reduction} pattern is both simple and efficient for common associative operations.
 
-\textbf{Q5 — How can you set the number of threads? List two ways.}
-\par
-1) Set the environment variable: `export OMP_NUM_THREADS=4` (Bash) or `$env:OMP_NUM_THREADS=4` (PowerShell). 2) Call `omp_set_num_threads(n);` from code before the parallel region.
-
-\textbf{Q6 — Run the counting program with 1, 2, 4, 8 threads. Plot speedup. Is it linear? Why not?}
-\par
-Speedup is not perfectly linear in practice. Limits include the serial fraction (Amdahl's law), synchronization overhead, load imbalance, and memory bandwidth or cache contention which limit scalability. See the included speedup plot for measured behavior.
-
-\textbf{Q7 — Compare OpenMP with Pthreads in code complexity and performance. Which would you choose for a new project?}
-\par
-OpenMP greatly reduces boilerplate and makes loop-level parallelism simple and less error-prone; it's my choice for data-parallel tasks where rapid development and maintainability matter. Pthreads can offer lower-level control and sometimes marginal performance gains when finely tuned, but at significantly higher development cost. For most new projects I would start with OpenMP and only move to Pthreads if profiling shows a need for lower-level optimizations.
-
-\section*{6. Reflection}
-OpenMP made it straightforward to express parallel loop patterns with minimal code changes. The `reduction` clause removed the need for explicit locking while keeping correctness. In our experiments OpenMP yielded comparable speedups to Pthreads and MPI for small numbers of threads, but non-linear scaling appeared due to memory bandwidth and serial portions of the code. The parallel initialization with `rand_r` illustrated how to avoid shared RNG contention. Overall, OpenMP provides excellent productivity for common parallel patterns; for fine-grained control or portability to distributed memory, MPI or Pthreads may still be preferable.
+\section*{References}
+\begin{itemize}
+  \item OpenMP Application Program Interface (latest specification).
+  \item "Using OpenMP: Portable Shared Memory Parallel Programming" — Chapman, Jost, van der Pas.
+\end{itemize}
 
 \vfill
-\noindent{\small Replace placeholder images in the `screenshots/` directory and recompile with `pdflatex report.tex` to produce the final PDF.}
+\noindent{\small Replace the three placeholder images in \texttt{screenshots/hello_omp.png}, \texttt{Other/speedup_comparison.png}, and \texttt{Other/comparison_threads.png} with your captured PNGs. Then compile with \texttt{pdflatex report.tex}.}
 
 \end{document}
